@@ -1,0 +1,403 @@
+﻿////////////////////////////////////
+// CharacterSelectionWidget.cpp
+////////////////////////////////////
+
+#include "UserInterface/MainMapUI/CharacterSelectionWidget.h"
+#include "Sandoria/ClientCore/MainMenuGameMode.h"
+#include "CharacterItem.h"
+#include "Kismet/GameplayStatics.h"
+
+void UCharacterSelectionWidget::NativeConstruct()
+{
+    Super::NativeConstruct();
+
+    // Configurează butoanele
+    if (CreateCharacterButton)
+    {
+        CreateCharacterButton->OnClicked.AddDynamic(this, &UCharacterSelectionWidget::OnCreateCharacterClicked);
+    }
+
+    if (DeleteCharacterButton)
+    {
+        DeleteCharacterButton->OnClicked.AddDynamic(this, &UCharacterSelectionWidget::OnDeleteCharacterClicked);
+    }
+
+    if (BackToLoginButton)
+    {
+        BackToLoginButton->OnClicked.AddDynamic(this, &UCharacterSelectionWidget::OnBackToLoginClicked);
+    }
+
+    if (EnterToWorldButton)
+    {
+        EnterToWorldButton->OnClicked.AddDynamic(this, &UCharacterSelectionWidget::OnEnterToWorldClicked);
+    }
+
+    // Populează lista de caractere
+    PopulateCharacterList();
+}
+
+void UCharacterSelectionWidget::OnCharacterSelected(UCharacterItem* SelectedWidget)
+{
+     if (!SelectedWidget)
+    {
+        UE_LOG(LogTemp, Error, TEXT("SelectedWidget is NULL!"));
+        return;
+    }
+
+    // Resetăm selecția pentru toate caracterele
+    for (UWidget* Widget : CharacterListBox->GetAllChildren())
+    {
+        UCharacterItem* CharacterWidget = Cast<UCharacterItem>(Widget);
+        if (CharacterWidget)
+        {
+            CharacterWidget->SetSelected(false);
+        }
+    }
+
+    // Selectăm noul caracter
+    SelectedCharacter.Name = SelectedWidget->GetCharacterName();
+    SelectedCharacter.CharacterLevel = SelectedWidget->GetCharacterLevel();
+    
+
+    SelectedWidget->SetSelected(true);
+
+    UE_LOG(LogTemp, Warning, TEXT("Selected Character: %s"), *SelectedCharacter.Name);
+
+    // Actualizăm actorul de previzualizare
+    UpdateCharacterPreview();
+}
+
+void UCharacterSelectionWidget::OnCreateCharacterClicked()
+{
+    UE_LOG(LogTemp, Warning, TEXT("Create Character Clicked!"));
+
+    AMainMenuGameMode* GameMode = Cast<AMainMenuGameMode>(UGameplayStatics::GetGameMode(this));
+    if (GameMode)
+    {
+        GameMode->RemoveCharacterSelectionPanel();
+        GameMode->ShowCharacterCreationPanel();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Eroare: GameMode nu a fost găsit!"));
+    }
+}
+
+void UCharacterSelectionWidget::OnDeleteCharacterClicked()
+{
+    if (SelectedCharacter.Name.IsEmpty())
+    {
+        UE_LOG(LogTemp, Error, TEXT("No character selected to delete!"));
+        return;
+    }
+
+    USandoriaGameInstance* GameInstance = Cast<USandoriaGameInstance>(UGameplayStatics::GetGameInstance(this));
+    if (!GameInstance)
+    {
+        UE_LOG(LogTemp, Error, TEXT("GameInstance not found!"));
+        return;
+    }
+
+    GameInstance->DeleteCharacter(SelectedCharacter);
+    PopulateCharacterList();
+    UE_LOG(LogTemp, Warning, TEXT("Deleted character: %s"), *SelectedCharacter.Name);
+}
+
+void UCharacterSelectionWidget::OnBackToLoginClicked()
+{
+    UE_LOG(LogTemp, Warning, TEXT("Button Back to Login panel was Clicked!"));
+
+    AMainMenuGameMode* GameMode = Cast<AMainMenuGameMode>(UGameplayStatics::GetGameMode(this));
+    if (GameMode)
+    {
+        GameMode->RemoveCharacterSelectionPanel();
+        GameMode->ShowLoginPanel();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Eroare: GameMode nu a fost găsit!"));
+    }
+}
+
+
+void UCharacterSelectionWidget::OnEnterToWorldClicked()
+{
+    // Verifică dacă un caracter a fost selectat
+    if (SelectedCharacter.Name.IsEmpty())
+    {
+        UE_LOG(LogTemp, Error, TEXT("No character selected!"));
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("Entering world with: %s"), *SelectedCharacter.Name);
+
+    // Obține GameInstance-ul
+    USandoriaGameInstance* GameInstance = Cast<USandoriaGameInstance>(UGameplayStatics::GetGameInstance(this));
+    if (!GameInstance)
+    {
+        UE_LOG(LogTemp, Error, TEXT("GameInstance not found!"));
+        return;
+    }
+
+    // Verifică dacă socket-ul este valid
+    if (!GameInstance->GetNetworkManager()->IsSocketValid())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Socket invalid. Încerc să reconectez..."));
+        if (!GameInstance->GetNetworkManager()->ConnectToServer("127.0.0.1", 12345))
+        {
+            UE_LOG(LogTemp, Error, TEXT("Reconectarea la server a eșuat!"));
+            return;
+        }
+    }
+
+    // Trimite comanda de intrare în lume, adăugând un delimiter "\n" la final
+    FString RequestData = "ENTER_WORLD:" + SelectedCharacter.Name + "\n";
+    if (!GameInstance->GetNetworkManager()->SendData(RequestData))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to send Enter World request to server!"));
+        return;
+    }
+
+    // Așteptăm să primim mesajul "ENTER_SUCCESS"
+    FString Response;
+    const float Timeout = 5.0f; // timp maxim de așteptare în secunde
+    float ElapsedTime = 0.0f;
+    while (ElapsedTime < Timeout)
+    {
+        Response = GameInstance->GetNetworkManager()-> ReceiveMessage();
+        // Verificăm dacă mesajul conține ENTER_SUCCESS
+        if (Response.Contains("ENTER_SUCCESS"))
+        {
+            break;
+        }
+        FPlatformProcess::Sleep(0.1f);
+        ElapsedTime += 0.1f;
+    }
+
+    if (Response.Contains("ENTER_SUCCESS"))
+    {
+        // Setează numele jucătorului local în GameInstance
+        USandoriaGameInstance* LocalGameInstance = Cast<USandoriaGameInstance>(UGameplayStatics::GetGameInstance(this));
+        if (LocalGameInstance)
+        {
+            LocalGameInstance->SetLocalPlayerName(SelectedCharacter.Name);
+        }
+
+        UE_LOG(LogTemp, Warning, TEXT("Server confirmed character %s entering world."), *SelectedCharacter.Name);
+
+        // Curăță UI-ul și referințele înainte de a schimba harta
+        RemoveFromParent();
+        CharacterListBox = nullptr;
+        SelectedCharacter = FCharacterStats();
+        CharacterPreviewActor = nullptr;
+
+        // Schimbă harta către "MainMap"
+        UE_LOG(LogTemp, Warning, TEXT("Schimbăm harta către MainMap..."));
+        UGameplayStatics::OpenLevel(this, "MainMap");
+
+        // După ce harta s-a încărcat complet, spawn-ui PlayerPawn-ul
+        FTimerHandle TimerHandle;
+        GetWorld()->GetTimerManager().SetTimer(TimerHandle, [GameInstance]()
+            {
+                if (GameInstance)
+                {
+                    GameInstance->SpawnPlayerPawn();
+                }
+            }, 3.0f, false); // Așteaptă 3 secunde (ajustează dacă este nevoie)
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Enter world failed! Server response: %s"), *Response);
+    }
+}
+
+
+
+
+
+
+
+//void UCharacterSelectionWidget::OnEnterToWorldClicked()
+//{
+//    if (SelectedCharacter.Name.IsEmpty())
+//    {
+//        UE_LOG(LogTemp, Error, TEXT("No character selected!"));
+//        return;
+//    }
+//
+//    UE_LOG(LogTemp, Warning, TEXT("Entering world with: %s"), *SelectedCharacter.Name);
+//
+//    USandoriaGameInstance* GameInstance = Cast<USandoriaGameInstance>(UGameplayStatics::GetGameInstance(this));
+//    if (!GameInstance)
+//    {
+//        UE_LOG(LogTemp, Error, TEXT("GameInstance not found!"));
+//        return;
+//    }
+//
+//    // Verifică dacă socket-ul este valid
+//    if (!GameInstance->IsSocketValid())
+//    {
+//        UE_LOG(LogTemp, Warning, TEXT("Socket invalid. Încerc să reconectez..."));
+//        if (!GameInstance->ConnectToServer("127.0.0.1", 12345))
+//        {
+//            UE_LOG(LogTemp, Error, TEXT("Reconectarea la server a eșuat!"));
+//            return;
+//        }
+//    }
+//
+//    // Trimite comanda de intrare în lume
+//    FString RequestData = "ENTER_WORLD:" + SelectedCharacter.Name;
+//    if (!GameInstance->SendData(RequestData))
+//    {
+//        UE_LOG(LogTemp, Error, TEXT("Failed to send Enter World request to server!"));
+//        return;
+//    }
+//
+//    FString Response = GameInstance->ReceiveData();
+//    if (Response == "ENTER_SUCCESS")
+//    {
+//        UE_LOG(LogTemp, Warning, TEXT("Server confirmed character %s entering world."), *SelectedCharacter.Name);
+//
+//        // 📌 Curățăm UI-ul și referințele la obiecte înainte de OpenLevel
+//        RemoveFromParent();
+//        CharacterListBox = nullptr;
+//        SelectedCharacter = FCharacterStats();
+//        CharacterPreviewActor = nullptr;
+//
+//        // 🚀 Schimbăm harta
+//        UGameplayStatics::OpenLevel(this, "MainMap");
+//
+//        // 📌 Asigură-te că Player Pawn este creat corect
+//        FTimerHandle TimerHandle;
+//        GetWorld()->GetTimerManager().SetTimer(TimerHandle, [GameInstance]()
+//            {
+//                if (GameInstance)
+//                {
+//                    GameInstance->SpawnPlayerPawn();
+//                }
+//            }, 1.0f, false);
+//    }
+//    else
+//    {
+//        UE_LOG(LogTemp, Error, TEXT("Enter world failed! Server response: %s"), *Response);
+//    }
+//}    
+
+void UCharacterSelectionWidget::SelectCharacter(int32 Index)
+{
+    USandoriaGameInstance* GameInstance = Cast<USandoriaGameInstance>(UGameplayStatics::GetGameInstance(this));
+    if (!GameInstance)
+    {
+        UE_LOG(LogTemp, Error, TEXT("GameInstance not found!"));
+        return;
+    }
+
+    TArray<FCharacterStats> CharacterList = GameInstance->GetCharacterData();
+
+    if (CharacterList.IsValidIndex(Index))
+    {
+        SelectedCharacter = CharacterList[Index];
+        UE_LOG(LogTemp, Warning, TEXT("Selected character: %s"), *SelectedCharacter.Name);
+
+        // Actualizăm UI-ul pentru a evidenția selecția
+        for (UWidget* Widget : CharacterListBox->GetAllChildren())
+        {
+            UCharacterItem* CharacterWidget = Cast<UCharacterItem>(Widget);
+            if (CharacterWidget)
+            {
+                // Evidențiem caracterul selectat
+                CharacterWidget->SetSelected(CharacterWidget->CharacterIndex == Index);              
+            }
+        }
+
+        // Actualizăm previzualizarea caracterului
+        UpdateCharacterPreview();
+    }
+}
+
+void UCharacterSelectionWidget::UpdateCharacterPreview()
+{
+    if (!GetWorld())
+    {
+        UE_LOG(LogTemp, Error, TEXT("No valid world for character preview!"));
+        return;
+    }
+
+    // Dacă există deja un character preview, îl ștergem
+    if (CharacterPreviewActor)
+    {
+        CharacterPreviewActor->Destroy();
+        CharacterPreviewActor = nullptr;
+    }
+
+    // Spawnăm un nou actor de previzualizare
+    FActorSpawnParameters SpawnParams;
+    CharacterPreviewActor = GetWorld()->SpawnActor<AActorCharacterPreviewActor>(AActorCharacterPreviewActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+
+    if (CharacterPreviewActor)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Spawned preview for character: %s"), *SelectedCharacter.Name);
+        // Aici poți seta skin-ul sau animațiile în funcție de caracter
+    }
+}
+
+void UCharacterSelectionWidget::PopulateCharacterList()
+{
+    if (!CharacterListBox)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("CharacterListBox is NULL!"));
+        return;
+    }
+
+    if (!CharacterItemClass)
+    {
+        UE_LOG(LogTemp, Error, TEXT("CharacterItemClass is NULL! Set it in the editor."));
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("PopulateCharacterList() called!"));
+
+    CharacterListBox->ClearChildren();
+
+    USandoriaGameInstance* GameInstance = Cast<USandoriaGameInstance>(UGameplayStatics::GetGameInstance(this));
+    if (!GameInstance)
+    {
+        UE_LOG(LogTemp, Error, TEXT("SandoriaGameInstance not found!"));
+        return;
+    }
+
+    TArray<FCharacterStats> CharacterList = GameInstance->GetCharacterData();
+
+    if (CharacterList.Num() == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No characters found!"));
+        return;
+    }
+
+    // Creăm widget-urile pentru caractere
+    for (int32 i = 0; i < CharacterList.Num(); i++)
+    {
+        UCharacterItem* CharacterWidget = CreateWidget<UCharacterItem>(this, CharacterItemClass);
+        if (!CharacterWidget)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Failed to create CharacterWidget for %s"), *CharacterList[i].Name);
+            continue;
+        }
+
+        CharacterWidget->SetCharacterName(CharacterList[i].Name);
+        CharacterWidget->SetCharacterLevel(CharacterList[i].CharacterLevel);
+        // Setează și alte atribute ale caracterului aici
+
+        // Stocăm indexul caracterului în widget
+        CharacterWidget->CharacterIndex = i;
+
+        // Legăm evenimentul de selecție
+        CharacterWidget->OnCharacterSelected.BindUObject(this, &UCharacterSelectionWidget::SelectCharacter);
+
+        CharacterListBox->AddChild(CharacterWidget);
+        UE_LOG(LogTemp, Warning, TEXT("Widget added for character %s"), *CharacterList[i].Name);
+    }
+
+    // 📌 Selectăm automat primul caracter
+    SelectCharacter(0);
+}
