@@ -58,18 +58,6 @@ struct FCharacterStats
     int32 CharacterLevel;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    int32 MaxHealth;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    int32 CurHealth;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    int32 MaxMana;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    int32 CurMana;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     ECharacterFaction CharacterFaction;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
@@ -82,7 +70,7 @@ struct FCharacterStats
     ECharacterGender CharacterGender;
     // Constructor default
     FCharacterStats()
-        : Name("TestName"), CharacterLevel(7), MaxHealth(100), CurHealth(100), MaxMana(50), CurMana(50), CharacterFaction(ECharacterFaction::FACTION_NONE), CharacterRace(ECharacterRace::RACE_NONE), CharacterClass(ECharacterClass::CLASS_NONE)
+        : Name("TestName"), CharacterLevel(7), CharacterFaction(ECharacterFaction::FACTION_NONE), CharacterRace(ECharacterRace::RACE_NONE), CharacterClass(ECharacterClass::CLASS_NONE), CharacterGender(ECharacterGender::GENDER_MALE)
     {
     }
 };
@@ -96,4 +84,13 @@ struct FClassIcons
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     UTexture2D* Icon;
 
+};
+
+USTRUCT(BlueprintType)
+struct FEnterWorldRequestPacket 
+{
+    GENERATED_BODY()
+
+    uint32_t PlayerID;
+    uint32_t CharacterID;
 };

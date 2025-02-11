@@ -139,7 +139,7 @@ TArray<FCharacterStats> USandoriaGameInstance::GetCharacterData()
     // Eliminăm prefixul "CHAR_LIST:" dacă este prezent
     if (Response.StartsWith("CHAR_LIST:"))
     {
-        Response = Response.RightChop(10);
+        Response = Response.RightChop(10);        
     }
 
     if (Response == "NO_CHARACTERS")
@@ -156,12 +156,14 @@ TArray<FCharacterStats> USandoriaGameInstance::GetCharacterData()
         TArray<FString> CharacterData;
         Entry.ParseIntoArray(CharacterData, TEXT(","), true);
 
-        if (CharacterData.Num() == 2)
+        if (CharacterData.Num() >= 2)  // Verificăm dacă avem minim nume și level
         {
             FCharacterStats NewCharacter;
             NewCharacter.Name = CharacterData[0];
-            NewCharacter.CharacterLevel = FCString::Atoi(*CharacterData[1]);
+            NewCharacter.CharacterLevel = FCString::Atoi(*CharacterData[1]); // Convertim level-ul
+
             CharacterList.Add(NewCharacter);
+            
         }
         else
         {
@@ -212,84 +214,6 @@ void USandoriaGameInstance::DeleteCharacter(FCharacterStats CharacterToDelete)
 {
     UE_LOG(LogTemp, Warning, TEXT("Deleting character: %s"), *CharacterToDelete.Name);
     // TODO: Adaugă logica pentru a elimina caracterul din baza de date sau din listă
-}
-
-void USandoriaGameInstance::OnLevelLoaded(UWorld* LoadedWorld)
-{
-    UE_LOG(LogTemp, Warning, TEXT("OnLevelLoaded: Level loaded: %s"), *LoadedWorld->GetMapName());
-
-    // Dacă nivelul încărcat este MainMap, spawnăm Pawn-ul jucătorului
-    if (LoadedWorld->GetMapName().Contains("MainMap"))
-    {
-        SpawnPlayerPawn();
-        FCoreUObjectDelegates::PostLoadMapWithWorld.RemoveAll(this);
-    }
-}
-
-void USandoriaGameInstance::SpawnOtherPlayers(const TArray<FString>& PlayerNames)
-{
-    for (const FString& Player : PlayerNames)
-    {
-        // Evită spawnarea jucătorului local
-        if (Player == LocalPlayerName)
-        {
-            continue;
-        }
-
-        // Alege o locație aleatorie pentru spawn (ajustează după necesități)
-        FVector SpawnLocation = FVector(FMath::RandRange(-500, 500), FMath::RandRange(-500, 500), 100);
-        FRotator SpawnRotation = FRotator::ZeroRotator;
-        FActorSpawnParameters SpawnParams;
-
-        if (!BP_BaseCharacterClass)
-        {
-            UE_LOG(LogTemp, Error, TEXT("SpawnOtherPlayers: BP_BaseCharacterClass NU este setat!"));
-            return;
-        }
-
-        APawn* OtherPlayerPawn = GetWorld()->SpawnActor<APawn>(BP_BaseCharacterClass, SpawnLocation, SpawnRotation, SpawnParams);
-        if (OtherPlayerPawn)
-        {
-            OtherPlayerMap.Add(Player, OtherPlayerPawn);
-            UE_LOG(LogTemp, Warning, TEXT("Jucător %s spawnat în lume!"), *Player);
-        }
-    }
-}
-
-void USandoriaGameInstance::SpawnPlayerPawn()
-{
-    APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-    if (!PlayerController)
-    {
-        UE_LOG(LogTemp, Error, TEXT("SpawnPlayerPawn: PlayerController NU a fost găsit!"));
-        return;
-    }
-
-    if (!PlayerController->GetPawn())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("SpawnPlayerPawn: Playerul NU are un Pawn! Încerc să creez unul..."));
-
-        if (!BP_BaseCharacterClass)
-        {
-            UE_LOG(LogTemp, Error, TEXT("SpawnPlayerPawn: BP_BaseCharacterClass NU este setat!"));
-            return;
-        }
-
-        FVector SpawnLocation = FVector(0, 0, 100); // Poziție inițială
-        FRotator SpawnRotation = FRotator::ZeroRotator;
-        FActorSpawnParameters SpawnParams;
-
-        APawn* NewPawn = GetWorld()->SpawnActor<APawn>(BP_BaseCharacterClass, SpawnLocation, SpawnRotation, SpawnParams);
-        if (NewPawn)
-        {
-            PlayerController->Possess(NewPawn);
-            UE_LOG(LogTemp, Warning, TEXT("SpawnPlayerPawn: Pawn creat și posedat!"));
-        }
-        else
-        {
-            UE_LOG(LogTemp, Error, TEXT("SpawnPlayerPawn: Eșec la spawnarea Pawn-ului!"));
-        }
-    }
 }
 
 bool USandoriaGameInstance::IsCharacterNameAvailable(const FString& CharacterName)

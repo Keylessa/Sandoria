@@ -50,11 +50,7 @@ public:
     void DeleteCharacter(FCharacterStats CharacterToDelete);
 
     // Funcții legate de nivel și spawn
-    UFUNCTION()
-    void OnLevelLoaded(UWorld* LoadedWorld);
-
-    void SpawnOtherPlayers(const TArray<FString>& PlayerNames);
-    void SpawnPlayerPawn();
+ 
 
     // Verifică disponibilitatea numelui caracterului
     UFUNCTION(BlueprintCallable, Category = "Characters")

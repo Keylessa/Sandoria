@@ -176,13 +176,7 @@ void UCharacterSelectionWidget::OnEnterToWorldClicked()
 
     if (Response.Contains("ENTER_SUCCESS"))
     {
-        // Setează numele jucătorului local în GameInstance
-        USandoriaGameInstance* LocalGameInstance = Cast<USandoriaGameInstance>(UGameplayStatics::GetGameInstance(this));
-        if (LocalGameInstance)
-        {
-            LocalGameInstance->SetLocalPlayerName(SelectedCharacter.Name);
-        }
-
+  
         UE_LOG(LogTemp, Warning, TEXT("Server confirmed character %s entering world."), *SelectedCharacter.Name);
 
         // Curăță UI-ul și referințele înainte de a schimba harta
@@ -195,15 +189,6 @@ void UCharacterSelectionWidget::OnEnterToWorldClicked()
         UE_LOG(LogTemp, Warning, TEXT("Schimbăm harta către MainMap..."));
         UGameplayStatics::OpenLevel(this, "MainMap");
 
-        // După ce harta s-a încărcat complet, spawn-ui PlayerPawn-ul
-        FTimerHandle TimerHandle;
-        GetWorld()->GetTimerManager().SetTimer(TimerHandle, [GameInstance]()
-            {
-                if (GameInstance)
-                {
-                    GameInstance->SpawnPlayerPawn();
-                }
-            }, 3.0f, false); // Așteaptă 3 secunde (ajustează dacă este nevoie)
     }
     else
     {
