@@ -68,6 +68,23 @@ struct FCharacterStats
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     ECharacterGender CharacterGender;
+public:
+    UPROPERTY()
+    uint32 PlayerID;
+
+    UPROPERTY()
+    uint32 CharacterID;
+
+    UPROPERTY()
+    float PosX;
+
+    UPROPERTY()
+    float PosY;
+
+    UPROPERTY()
+    float PosZ;
+
+
     // Constructor default
     FCharacterStats()
         : Name("TestName"), CharacterLevel(7), CharacterFaction(ECharacterFaction::FACTION_NONE), CharacterRace(ECharacterRace::RACE_NONE), CharacterClass(ECharacterClass::CLASS_NONE), CharacterGender(ECharacterGender::GENDER_MALE)
@@ -86,11 +103,27 @@ struct FClassIcons
 
 };
 
-USTRUCT(BlueprintType)
-struct FEnterWorldRequestPacket 
+USTRUCT()
+struct FEnterWorldPacket
 {
     GENERATED_BODY()
 
-    uint32_t PlayerID;
-    uint32_t CharacterID;
+    uint32 PlayerID;
+    uint32 CharacterID;
+    float PosX, PosY, PosZ;
+
+    // Constructor implicit
+    FEnterWorldPacket() : PlayerID(0), CharacterID(0), PosX(0), PosY(0), PosZ(0) {}
+
+    // Funcție pentru serializare
+    template <typename Archive>
+    void Serialize(Archive& Ar)
+    {
+        // Utilizăm funcția de serializare corectă pentru fiecare tip de date
+        Ar << PlayerID;
+        Ar << CharacterID;
+        Ar << PosX;
+        Ar << PosY;
+        Ar << PosZ;
+    }
 };

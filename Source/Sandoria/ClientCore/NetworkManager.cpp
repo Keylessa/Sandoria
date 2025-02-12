@@ -50,6 +50,49 @@ bool UNetworkManager::IsSocketValid() const
 	return ClientSocket && ClientSocket->GetConnectionState() == SCS_Connected;
 }
 
+void UNetworkManager::ProcessReceivedMessage(const FString& Message)
+{
+	// Dacă mesajul începe cu "ENTER_WORLD:"
+	if (Message.StartsWith("ENTER_WORLD:"))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Raw server message: %s"), *Message);
+
+		// Eliminăm prefixul "ENTER_WORLD:" (12 caractere)
+		FString Data = Message.RightChop(12).TrimStartAndEnd();
+		UE_LOG(LogTemp, Warning, TEXT("Processed ENTER_WORLD data: %s"), *Data);
+
+		// Se presupune că datele sunt separate prin virgulă: PlayerID,CharacterID,PosX,PosY,PosZ
+		TArray<FString> Tokens;
+		Data.ParseIntoArray(Tokens, TEXT(","), true);
+
+		if (Tokens.Num() >= 5)
+		{
+			int32 PlayerID = FCString::Atoi(*Tokens[0]);
+			int32 CharacterID = FCString::Atoi(*Tokens[1]);
+			FVector SpawnLocation(
+				FCString::Atof(*Tokens[2]),
+				FCString::Atof(*Tokens[3]),
+				FCString::Atof(*Tokens[4])
+			);
+
+			UE_LOG(LogTemp, Warning, TEXT("Spawning PlayerID %d at %s"), PlayerID, *SpawnLocation.ToString());
+
+			AGame_GameMode* GM = Cast<AGame_GameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+			if (GM)
+			{
+				GM->SpawnPlayerInWorld(PlayerID, CharacterID, SpawnLocation);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("ProcessReceivedMessage: GameMode is null!"));
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Invalid ENTER_WORLD message format: %s"), *Data);
+		}
+	}
+}
 bool UNetworkManager::SendData(const FString& Data)
 {
 	if (!IsSocketValid())
@@ -68,6 +111,23 @@ bool UNetworkManager::SendData(const FString& Data)
 		UE_LOG(LogTemp, Error, TEXT("SendData: Eroare la trimiterea datelor către server!"));
 	}
 	return bSuccess;
+}
+
+bool UNetworkManager::SendData(const FEnterWorldPacket& Packet)
+{
+	FBufferArchive Archive;
+
+	// Creăm o copie non-const pentru serializare
+	FEnterWorldPacket TempPacket = Packet;
+	TempPacket.Serialize(Archive);
+
+	// Convertim buffer-ul într-un TArray<uint8>
+	TArray<uint8> Data = Archive;
+
+	// Convertim array-ul într-un FString
+	FString SerializedData = FString(UTF8_TO_TCHAR(reinterpret_cast<const char*>(Data.GetData())));
+
+	return SendData(SerializedData);
 }
 
 FString UNetworkManager::ReceiveData()
@@ -131,4 +191,28 @@ void UNetworkManager::OnNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENe
 {
 	UE_LOG(LogTemp, Error, TEXT("Network failure: %s"), *ErrorString);
 	// Aici poți adăuga logica pentru reconectare sau notificare
+}
+
+void UNetworkManager::HandleEnterWorldPacket(FEnterWorldPacket packet)
+{
+	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+	{
+		if (AGame_GameMode* GM = Cast<AGame_GameMode>(UGameplayStatics::GetGameMode(this)))
+		{
+			if (GM) {
+				// Creează un FVector din valorile poziției din pachet
+				FVector SpawnLocation(packet.PosX, packet.PosY, packet.PosZ);
+				// Apelează funcția cu argumentele separate
+				GM->SpawnPlayerInWorld(packet.PlayerID, packet.CharacterID, SpawnLocation);
+			}
+			else 
+			{
+				UE_LOG(LogTemp, Error, TEXT("GameMode is not valid!"));
+			}
+		}
+		else 
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to get GameMode."));
+		}
+	}
 }

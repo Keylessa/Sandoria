@@ -70,7 +70,6 @@ void UCharacterSelectionWidget::OnCharacterSelected(UCharacterItem* SelectedWidg
 void UCharacterSelectionWidget::OnCreateCharacterClicked()
 {
     UE_LOG(LogTemp, Warning, TEXT("Create Character Clicked!"));
-
     AMainMenuGameMode* GameMode = Cast<AMainMenuGameMode>(UGameplayStatics::GetGameMode(this));
     if (GameMode)
     {
@@ -122,7 +121,7 @@ void UCharacterSelectionWidget::OnBackToLoginClicked()
 
 void UCharacterSelectionWidget::OnEnterToWorldClicked()
 {
-    // Verifică dacă un caracter a fost selectat
+   
     if (SelectedCharacter.Name.IsEmpty())
     {
         UE_LOG(LogTemp, Error, TEXT("No character selected!"));
@@ -131,7 +130,6 @@ void UCharacterSelectionWidget::OnEnterToWorldClicked()
 
     UE_LOG(LogTemp, Warning, TEXT("Entering world with: %s"), *SelectedCharacter.Name);
 
-    // Obține GameInstance-ul
     USandoriaGameInstance* GameInstance = Cast<USandoriaGameInstance>(UGameplayStatics::GetGameInstance(this));
     if (!GameInstance)
     {
@@ -139,7 +137,6 @@ void UCharacterSelectionWidget::OnEnterToWorldClicked()
         return;
     }
 
-    // Verifică dacă socket-ul este valid
     if (!GameInstance->GetNetworkManager()->IsSocketValid())
     {
         UE_LOG(LogTemp, Warning, TEXT("Socket invalid. Încerc să reconectez..."));
@@ -150,22 +147,27 @@ void UCharacterSelectionWidget::OnEnterToWorldClicked()
         }
     }
 
-    // Trimite comanda de intrare în lume, adăugând un delimiter "\n" la final
-    FString RequestData = "ENTER_WORLD:" + SelectedCharacter.Name + "\n";
+    FString RequestData = "ENTER_WORLD:" +
+        FString::FromInt(SelectedCharacter.PlayerID) + "," +
+        FString::FromInt(SelectedCharacter.CharacterID) + "," +
+        FString::SanitizeFloat(SelectedCharacter.PosX) + "," +
+        FString::SanitizeFloat(SelectedCharacter.PosY) + "," +
+        FString::SanitizeFloat(SelectedCharacter.PosZ) + "\n";
+
     if (!GameInstance->GetNetworkManager()->SendData(RequestData))
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to send Enter World request to server!"));
         return;
     }
 
-    // Așteptăm să primim mesajul "ENTER_SUCCESS"
     FString Response;
-    const float Timeout = 5.0f; // timp maxim de așteptare în secunde
+    const float Timeout = 5.0f;
     float ElapsedTime = 0.0f;
     while (ElapsedTime < Timeout)
     {
-        Response = GameInstance->GetNetworkManager()-> ReceiveMessage();
-        // Verificăm dacă mesajul conține ENTER_SUCCESS
+        Response = GameInstance->GetNetworkManager()->ReceiveMessage();
+        GameInstance->GetNetworkManager()->ProcessReceivedMessage(Response);
+
         if (Response.Contains("ENTER_SUCCESS"))
         {
             break;
@@ -176,19 +178,25 @@ void UCharacterSelectionWidget::OnEnterToWorldClicked()
 
     if (Response.Contains("ENTER_SUCCESS"))
     {
-  
         UE_LOG(LogTemp, Warning, TEXT("Server confirmed character %s entering world."), *SelectedCharacter.Name);
+        AMainMenuGameMode* GameMode = Cast<AMainMenuGameMode>(UGameplayStatics::GetGameMode(this));
 
-        // Curăță UI-ul și referințele înainte de a schimba harta
+        // ✅ Eliminăm LoginPanel înainte de schimbarea hărții
+        if (GameMode->LoginPanel && GameMode->LoginPanel->IsValidLowLevel())
+        {
+            GameMode->LoginPanel->RemoveFromParent();
+            GameMode->LoginPanel = nullptr;
+            UE_LOG(LogTemp, Warning, TEXT("LoginPanel has been removed."));
+        }
+
+        // ✅ Eliminăm CharacterSelectionWidget complet
         RemoveFromParent();
         CharacterListBox = nullptr;
         SelectedCharacter = FCharacterStats();
         CharacterPreviewActor = nullptr;
 
-        // Schimbă harta către "MainMap"
         UE_LOG(LogTemp, Warning, TEXT("Schimbăm harta către MainMap..."));
         UGameplayStatics::OpenLevel(this, "MainMap");
-
     }
     else
     {
@@ -198,75 +206,6 @@ void UCharacterSelectionWidget::OnEnterToWorldClicked()
 
 
 
-
-
-
-
-//void UCharacterSelectionWidget::OnEnterToWorldClicked()
-//{
-//    if (SelectedCharacter.Name.IsEmpty())
-//    {
-//        UE_LOG(LogTemp, Error, TEXT("No character selected!"));
-//        return;
-//    }
-//
-//    UE_LOG(LogTemp, Warning, TEXT("Entering world with: %s"), *SelectedCharacter.Name);
-//
-//    USandoriaGameInstance* GameInstance = Cast<USandoriaGameInstance>(UGameplayStatics::GetGameInstance(this));
-//    if (!GameInstance)
-//    {
-//        UE_LOG(LogTemp, Error, TEXT("GameInstance not found!"));
-//        return;
-//    }
-//
-//    // Verifică dacă socket-ul este valid
-//    if (!GameInstance->IsSocketValid())
-//    {
-//        UE_LOG(LogTemp, Warning, TEXT("Socket invalid. Încerc să reconectez..."));
-//        if (!GameInstance->ConnectToServer("127.0.0.1", 12345))
-//        {
-//            UE_LOG(LogTemp, Error, TEXT("Reconectarea la server a eșuat!"));
-//            return;
-//        }
-//    }
-//
-//    // Trimite comanda de intrare în lume
-//    FString RequestData = "ENTER_WORLD:" + SelectedCharacter.Name;
-//    if (!GameInstance->SendData(RequestData))
-//    {
-//        UE_LOG(LogTemp, Error, TEXT("Failed to send Enter World request to server!"));
-//        return;
-//    }
-//
-//    FString Response = GameInstance->ReceiveData();
-//    if (Response == "ENTER_SUCCESS")
-//    {
-//        UE_LOG(LogTemp, Warning, TEXT("Server confirmed character %s entering world."), *SelectedCharacter.Name);
-//
-//        // 📌 Curățăm UI-ul și referințele la obiecte înainte de OpenLevel
-//        RemoveFromParent();
-//        CharacterListBox = nullptr;
-//        SelectedCharacter = FCharacterStats();
-//        CharacterPreviewActor = nullptr;
-//
-//        // 🚀 Schimbăm harta
-//        UGameplayStatics::OpenLevel(this, "MainMap");
-//
-//        // 📌 Asigură-te că Player Pawn este creat corect
-//        FTimerHandle TimerHandle;
-//        GetWorld()->GetTimerManager().SetTimer(TimerHandle, [GameInstance]()
-//            {
-//                if (GameInstance)
-//                {
-//                    GameInstance->SpawnPlayerPawn();
-//                }
-//            }, 1.0f, false);
-//    }
-//    else
-//    {
-//        UE_LOG(LogTemp, Error, TEXT("Enter world failed! Server response: %s"), *Response);
-//    }
-//}    
 
 void UCharacterSelectionWidget::SelectCharacter(int32 Index)
 {

@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameStateBase.h"
+#include "GameFramework/GameState.h"
 #include "SandoriaGameStateBase.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class SANDORIA_API ASandoriaGameStateBase : public AGameStateBase
+class SANDORIA_API ASandoriaGameStateBase : public AGameState
 {
 	GENERATED_BODY()
 	

@@ -46,38 +46,27 @@ void ULoginPanel::NativeDestruct()
         LoginButton->OnClicked.Clear();
     }
 }
-
 void ULoginPanel::OnLoginClicked()
 {
-    // Verificăm dacă UsernameBox și PasswordBox sunt valide
-    if (!UsernameBox || !PasswordBox)
-    {
-        UE_LOG(LogTemp, Error, TEXT("UsernameBox or PasswordBox is null!"));
-        return;
-    }
-
+    // Verificarea UsernameBox și PasswordBox…
     FString Username = UsernameBox->GetText().ToString();
     FString Password = PasswordBox->GetText().ToString();
 
-    // Obținem referința la GameInstance și GameMode
     USandoriaGameInstance* GameInstance = Cast<USandoriaGameInstance>(GetGameInstance());
     AMainMenuGameMode* GameMode = Cast<AMainMenuGameMode>(UGameplayStatics::GetGameMode(this));
 
     if (GameInstance)
     {
-        // Se efectuează autentificarea (acest apel este blocant și se presupune că gestionează conexiunea prin NetworkManager)
         bool bSuccess = GameInstance->Authenticate(Username, Password);
 
         if (MessageText)
         {
-            // Afișăm mesajul
             MessageText->SetVisibility(ESlateVisibility::Visible);
 
             if (bSuccess)
             {
                 UE_LOG(LogTemp, Warning, TEXT("Login Successful!"));
 
-                // Dacă GameMode este valid, eliminăm panoul de login și afișăm widget-ul pentru selecția caracterului
                 if (GameMode)
                 {
                     GameMode->RemoveLoginPanel();
@@ -87,26 +76,23 @@ void ULoginPanel::OnLoginClicked()
                 {
                     UE_LOG(LogTemp, Error, TEXT("GameMode nu a fost găsit!"));
                 }
+                // Nu mai setăm timer-ul dacă login-ul este un succes
             }
             else
             {
                 UE_LOG(LogTemp, Error, TEXT("Login Failed!"));
-                // Dacă dorești, poți trimite un mesaj către server pentru eroare (comentat aici pentru claritate)
-                // FString LoginDataToSend = "LOGIN:" + Username + ":" + "Fail! Reason: Incorrect username or password!";
-                // GameInstance->SendData(LoginDataToSend);
-
                 MessageText->SetText(FText::FromString(TEXT("Incorrect username or password!")));
                 MessageText->SetColorAndOpacity(FSlateColor(FLinearColor::Red));
-            }
 
-            // Ascundem mesajul după 5 secunde
-            GetWorld()->GetTimerManager().SetTimer(VisibilityTimerHandle, [this]()
-                {
-                    if (MessageText)
+                // Setăm timer-ul doar în cazul eșecului
+                GetWorld()->GetTimerManager().SetTimer(VisibilityTimerHandle, [this]()
                     {
-                        MessageText->SetVisibility(ESlateVisibility::Hidden);
-                    }
-                }, 5.0f, false);
+                        if (MessageText)
+                        {
+                            MessageText->SetVisibility(ESlateVisibility::Hidden);
+                        }
+                    }, 5.0f, false);
+            }
         }
     }
     else
@@ -114,4 +100,5 @@ void ULoginPanel::OnLoginClicked()
         UE_LOG(LogTemp, Error, TEXT("GameInstance nu a fost găsit!"));
     }
 }
+
 

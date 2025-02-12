@@ -9,8 +9,8 @@
 #include "Sandoria/Characters/ActorCharacterPreviewActor.h" 
 #include "SandoriaGameInstance.generated.h"
 
-// Avem doar forward declaration pentru UI, dacă este necesar.
 class ULoginPanel;
+class UCharacterSelectionWidget;
 class UCreateCharacterUI;
 
 UCLASS()
@@ -58,11 +58,19 @@ public:
 
     // Inițializare actor pentru previzualizarea caracterului
     void InitCharacterPreview();
+    /*
+    void ShowLoginPanel();
+    void RemoveLoginPanel();
 
+    void ShowCharacterSelectionWidget();
+    void RemoveCharacterSelectionPanel();
+
+    void ShowCharacterCreationPanel();
+    void RemoveCharacterCreationPanel();
+    */
     // Callback apelat în caz de eșec de rețea
     UFUNCTION()
     void OnNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& ErrorString);
-
 protected:
     virtual void Init() override;
     virtual void Shutdown() override;
@@ -93,4 +101,6 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Character")
     TSubclassOf<APawn> BP_BaseCharacterClass;
+
+
 };

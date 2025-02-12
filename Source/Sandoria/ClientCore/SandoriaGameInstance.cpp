@@ -3,13 +3,17 @@
 // ==============================
 
 #include "SandoriaGameInstance.h"  
-#include "UserInterface/MainMapUI/LoginPanel.h"
+#include "Sandoria/UserInterface/MainMapUI/LoginPanel.h"
+#include "Sandoria/UserInterface/MainMapUI/CharacterSelectionWidget.h"
+#include "Sandoria/UserInterface/MainMapUI/CreateCharacterUI.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/Engine.h"
 
 USandoriaGameInstance* USandoriaGameInstance::GetInstance()
 {
-    return Cast<USandoriaGameInstance>(GWorld->GetGameInstance());
+    if (!GEngine) return nullptr;
+    UGameInstance* GI = GEngine->GameViewport->GetWorld()->GetGameInstance();
+    return Cast<USandoriaGameInstance>(GI);
 }
 
 void USandoriaGameInstance::OnNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& ErrorString)
@@ -17,6 +21,7 @@ void USandoriaGameInstance::OnNetworkFailure(UWorld* World, UNetDriver* NetDrive
     // Poți adăuga aici comportamentul dorit în caz de eșec de rețea.
     UE_LOG(LogTemp, Error, TEXT("GameInstance - Network failure: %s"), *ErrorString);
 }
+
 
 // ==============================
 // Inițializare și Shutdown
@@ -26,7 +31,7 @@ void USandoriaGameInstance::Init()
 {
     Super::Init();
 
-    // Obține instanța Network Manager-ului (subsystem-ul de rețea)
+     // Obține instanța Network Manager-ului (subsystem-ul de rețea)
     NetworkManager = NewObject<UNetworkManager>(this, UNetworkManager::StaticClass());
     if (NetworkManager)
     {
@@ -41,6 +46,7 @@ void USandoriaGameInstance::Init()
     {
         UE_LOG(LogTemp, Error, TEXT("NetworkManager nu a fost găsit în GameInstance!"));
     }
+    
 }
 
 void USandoriaGameInstance::Shutdown()
@@ -160,7 +166,8 @@ TArray<FCharacterStats> USandoriaGameInstance::GetCharacterData()
         {
             FCharacterStats NewCharacter;
             NewCharacter.Name = CharacterData[0];
-            NewCharacter.CharacterLevel = FCString::Atoi(*CharacterData[1]); // Convertim level-ul
+            NewCharacter.CharacterLevel = FCString::Atoi(*CharacterData[1]);
+           // NewCharacter.CharacterLevel = FCString::Atoi(*CharacterData[1]); // Convertim level-ul
 
             CharacterList.Add(NewCharacter);
             
@@ -261,3 +268,90 @@ void USandoriaGameInstance::InitCharacterPreview()
     }
 }
 
+/*
+void USandoriaGameInstance::ShowLoginPanel()
+{
+    if (LoginPanelClass)
+    {
+        LoginPanel = CreateWidget<ULoginPanel>(GetWorld(), LoginPanelClass);
+        if (LoginPanel)
+        {
+            if (GEngine) {
+                GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, ("GameInstace Acceseaza Login"));
+            }
+            LoginPanel->AddToViewport();
+            LoginPanel->SetVisibility(ESlateVisibility::Visible);
+            UE_LOG(LogTemp, Warning, TEXT("LoginPanel a fost adăugat în Viewport!"));
+        }
+    }
+}
+
+void USandoriaGameInstance::RemoveLoginPanel()
+{
+    if (LoginPanel)
+    {
+        LoginPanel->RemoveFromParent();
+        //LoginPanel = nullptr;
+        UE_LOG(LogTemp, Warning, TEXT("LoginPanel a fost ascuns!"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Eroare: LoginPanel este nullptr!"));
+    }
+}
+
+void USandoriaGameInstance::ShowCharacterSelectionWidget()
+{
+    if (CharacterSelectionPanelClass)
+    {
+        CharacterSelectionPanel = CreateWidget<UUserWidget>(GetWorld(), CharacterSelectionPanelClass);
+        if (CharacterSelectionPanel)
+        {
+            CharacterSelectionPanel->AddToViewport();
+            CharacterSelectionPanel->SetVisibility(ESlateVisibility::Visible);
+            UE_LOG(LogTemp, Warning, TEXT("CharacterSelectionPanel a fost adăugat în Viewport!"));
+        }
+    }
+}
+
+void USandoriaGameInstance::RemoveCharacterSelectionPanel()
+{
+    if (CharacterSelectionPanel)
+    {
+        CharacterSelectionPanel->RemoveFromParent();
+        CharacterSelectionPanel = nullptr;
+        UE_LOG(LogTemp, Warning, TEXT("CharacterSelectionPanel a fost ascuns!"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Eroare: CharacterSelectionPanel este nullptr!"));
+    }
+}
+
+void USandoriaGameInstance::ShowCharacterCreationPanel()
+{
+    if (CharacterCreatePanelClass)
+    {
+        CharacterCreationPanel = CreateWidget<UUserWidget>(GetWorld(), CharacterCreatePanelClass);
+        if (CharacterCreationPanel)
+        {
+            CharacterCreationPanel->AddToViewport();
+            CharacterCreationPanel->SetVisibility(ESlateVisibility::Visible);
+            UE_LOG(LogTemp, Warning, TEXT("CharacterCreationPanel a fost adăugat în Viewport!"));
+        }
+    }
+}
+
+void USandoriaGameInstance::RemoveCharacterCreationPanel()
+{
+    if (CharacterCreationPanel)
+    {
+        CharacterCreationPanel->RemoveFromParent();
+        CharacterCreationPanel = nullptr;
+        UE_LOG(LogTemp, Warning, TEXT("CharacterCreationPanel a fost ascuns!"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Eroare: CharacterCreationPanel este nullptr!"));
+    }
+}*/

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
+#include "Sandoria/StructsAndEnums/GameTypes.h"
 #include "Sandoria/ClientCore/GamePlayerController.h"
 #include "Game_GameMode.generated.h"
 
@@ -19,8 +20,9 @@ class SANDORIA_API AGame_GameMode : public AGameMode
 	AGame_GameMode();
 
 	void BeginPlay() override;
-
-	//void PostLogin(APlayerController* NewPlayer);
+public:
+	UFUNCTION(BlueprintCallable, Category = "Player")
+	void SpawnPlayerInWorld(int32 PlayerID, int32 CharacterID, FVector SpawnLocation);
 
 	UPROPERTY(EditDefaultsOnly, Category = "Character")
 	TSubclassOf<APawn> BP_BaseCharacterClass;

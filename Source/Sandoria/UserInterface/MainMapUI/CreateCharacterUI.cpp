@@ -125,7 +125,7 @@ void UCreateCharacterUI::OnFinishClicked()
 
         // Opțional: revenim la selecția caracterelor
         AMainMenuGameMode* GameMode = Cast<AMainMenuGameMode>(UGameplayStatics::GetGameMode(this));
-        if (GameMode)
+        if (!GameMode)
         {
             GameMode->RemoveCharacterCreationPanel();
             GameMode->ShowCharacterSelectionWidget();

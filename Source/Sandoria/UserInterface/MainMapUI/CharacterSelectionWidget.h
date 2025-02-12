@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Sandoria/StructsAndEnums/GameTypes.h"
 #include "Components/Button.h"
 #include "Components/VerticalBox.h"
 #include "CharacterItem.h"

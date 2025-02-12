@@ -19,6 +19,7 @@ DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 ABaseCharacter::ABaseCharacter()
 {
+
 	bReplicates = true;
 	bAlwaysRelevant = true;
 	SetReplicateMovement(true);  // 🔹 Mișcarea actorului este sincronizată

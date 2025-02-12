@@ -5,7 +5,12 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Sockets.h"
+#include "Sandoria/StructsAndEnums/GameTypes.h"
+#include "Sandoria/ClientCore/Game_GameMode.h"
+#include "Kismet/GameplayStatics.h"  
 #include "Networking.h"
+#include <iostream>
+#include <string>
 #include "NetworkManager.generated.h"
 
 /**
@@ -26,8 +31,15 @@ public:
 	// Verifică dacă socket-ul este valid
 	bool IsSocketValid() const;
 
+	// Această funcție primește un mesaj complet primit de la server
+	UFUNCTION()
+	void ProcessReceivedMessage(const FString& Message);
+
 	// Trimiterea datelor către server
 	bool SendData(const FString& Data);
+
+	// Functie care trimite un EnterWorldPacket
+	bool SendData(const FEnterWorldPacket& Packet);
 
 	// Recepționarea datelor de la server (varianta simplificată)
 	FString ReceiveData();
@@ -37,6 +49,8 @@ public:
 
 	// (Opțional) Tratarea erorilor de rețea – poți expune delegate-uri sau callback-uri
 	void OnNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& ErrorString);
+
+	void HandleEnterWorldPacket(FEnterWorldPacket packet);
 
 protected:
 	// Socket-ul folosit pentru client

@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Net/UnrealNetwork.h"
+#include "Sandoria/StructsAndEnums/GameTypes.h"
 #include "Logging/LogMacros.h"
 #include "BaseCharacter.generated.h"
 
@@ -45,8 +47,13 @@ class ABaseCharacter : public ACharacter
 	UInputAction* LookAction;
 
 public:
+	UPROPERTY(Replicated)
+	uint32 PlayerID;
+
 	ABaseCharacter();
+
 	
+	void SetPlayerID(uint32 ID) { PlayerID = ID; }
 
 protected:
 
@@ -68,5 +75,10 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override {
+		Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+		DOREPLIFETIME(ABaseCharacter, PlayerID);
+	}
 };
 

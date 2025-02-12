@@ -2,19 +2,23 @@
 
 
 #include "ClientCore/MainMenuGameMode.h"
+#include "ClientCore/SandoriaGameInstance.h"
 
 
 
 AMainMenuGameMode::AMainMenuGameMode()
 {
 	// Clasa de UI trebuie setată din Blueprint sau inițializată manual
-	//LoginPanel = nullptr;
+	LoginPanel = nullptr;
 
 }
 
 void AMainMenuGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+
+
+
 	ShowLoginPanel();
 }
 
@@ -23,11 +27,13 @@ void AMainMenuGameMode::ShowLoginPanel()
 	if (LoginPanelClass)
 	{
 		LoginPanel = CreateWidget<UUserWidget>(GetWorld(), LoginPanelClass);
-		if (LoginPanel)
-		{
-			LoginPanel->AddToViewport();
-			LoginPanel->SetVisibility(ESlateVisibility::Visible);
-			UE_LOG(LogTemp, Warning, TEXT("LoginPanel a fost adăugat în Viewport!"));
+		if (LoginPanel && LoginPanel->IsValidLowLevel()) {
+			if (LoginPanel)
+			{
+				LoginPanel->AddToViewport();
+				LoginPanel->SetVisibility(ESlateVisibility::Visible);
+				UE_LOG(LogTemp, Warning, TEXT("LoginPanel a fost adăugat în Viewport!"));
+			}
 		}
 	}
 }
@@ -37,7 +43,7 @@ void AMainMenuGameMode::RemoveLoginPanel()
 	if (LoginPanel)
 	{
 		LoginPanel->RemoveFromParent();
-		LoginPanel = nullptr;
+		//LoginPanel = nullptr;
 		UE_LOG(LogTemp, Warning, TEXT("LoginPanel a fost ascuns!"));
 	}
 	else

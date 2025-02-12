@@ -23,7 +23,7 @@ protected:
     virtual void BeginPlay() override;
 
 public:
-    /** Referință la LoginPanel */
+    /** Referință la LoginPanel   */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
     TSubclassOf<UUserWidget> LoginPanelClass;
 
@@ -41,7 +41,8 @@ public:
 
     UPROPERTY()
     UUserWidget* CharacterCreationPanel;
-
+  
+    
     void ShowLoginPanel();
     void RemoveLoginPanel();
     
@@ -50,4 +51,5 @@ public:
 
     void ShowCharacterCreationPanel();
     void RemoveCharacterCreationPanel();
+    
 };
